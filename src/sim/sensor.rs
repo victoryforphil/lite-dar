@@ -1,3 +1,4 @@
+use log::info;
 use nalgebra::{point, vector};
 use rapier3d::prelude::{QueryFilter, Ray};
 
@@ -7,6 +8,10 @@ use super::context::SimulationContext;
 
 pub struct TOFSensor {
     pub pose: Pose,
+}
+
+pub struct TOFSensorResult {
+    pub result: Vec<Vec<f32>>,
 }
 impl TOFSensor {
     pub fn new() -> Self {
@@ -20,19 +25,64 @@ impl TOFSensor {
         self.pose.position.z = 0.5;
     }
 
-    pub fn tick(&mut self, context: &mut SimulationContext) {
-        let ray = Ray::new(point![1.0, 2.0, 3.0], vector![0.0, 1.0, 0.0]);
-        let max_toi = 4.0;
+    pub fn tick(&mut self, context: &mut SimulationContext) -> TOFSensorResult {
+        let ray = Ray::new(point![0.0, 0.0, 0.5], vector![100.0, 0.0, 0.0]);
+
+        let max_toi = 100.0;
         let solid = true;
         let filter = QueryFilter::default();
 
-        if let Some((handle, toi)) =
-            query_pipeline.cast_ray(&collider_set, &ray, max_toi, solid, filter)
-        {
-            // The first collider hit has the handle `handle` and it hit after
-            // the ray travelled a distance equal to `ray.dir * toi`.
-            let hit_point = ray.point_at(toi); // Same as: `ray.origin + ray.dir * toi`
-            println!("Collider {:?} hit at point {}", handle, hit_point);
+        // Store 2d array of lidar distances
+        let lidar_w = 32;
+        let lidar_h = 32;
+        let mut lidar_distances = vec![vec![0.0; lidar_w as usize]; lidar_h as usize];
+
+        for x in 0..lidar_w {
+            for y in 0..lidar_h {
+                let ray = self.calculate_ray(x, y, lidar_w, lidar_h, 90.0);
+                let hit_result = context.query_pipeline.cast_ray(
+                    &context.rigid_bodies,
+                    &context.coliders,
+                    &ray,
+                    max_toi,
+                    solid,
+                    filter,
+                );
+
+                match hit_result {
+                    Some(hit) => {
+                        lidar_distances[x as usize][y as usize] = 1.0;
+                        info!("Hit: {:?}", hit)
+                    }
+                    None => {
+                        lidar_distances[x as usize][y as usize] = 0.0;
+                    }
+                }
+            }
         }
+
+        TOFSensorResult {
+            result: lidar_distances,
+        }
+    }
+
+    // Calculate Ray from a step, max step, total FOV
+    pub fn calculate_ray(&self, x: u16, y: u16, w: u16, h: u16, fov: f32) -> Ray {
+        let x = x as f32;
+        let y = y as f32;
+        let w = w as f32;
+        let h = h as f32;
+        let fov = fov.to_radians();
+
+        let x = (x / w) * fov - fov / 2.0;
+        let y = (y / h) * fov - fov / 2.0;
+
+        let dir = vector![x, y, 0.0];
+        // Scale dir by 100
+        let dir = dir.normalize() * 50.0;
+
+        let ray = Ray::new(point![0.0, 0.0, 1.0], dir);
+
+        ray
     }
 }

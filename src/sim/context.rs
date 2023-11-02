@@ -1,7 +1,7 @@
 use nalgebra::Vector3;
 use rapier3d::prelude::{
     BroadPhase, CCDSolver, ColliderSet, ImpulseJointSet, IntegrationParameters, IslandManager,
-    MultibodyJointSet, NarrowPhase, PhysicsPipeline, RigidBodySet,
+    MultibodyJointSet, NarrowPhase, PhysicsPipeline, QueryPipeline, RigidBodySet,
 };
 
 pub struct SimulationContext {
@@ -16,6 +16,9 @@ pub struct SimulationContext {
     pub impulse_joint_set: ImpulseJointSet,
     pub multibody_joint_set: MultibodyJointSet,
     pub ccd_solver: CCDSolver,
+    pub query_pipeline: QueryPipeline,
+    pub physics_hooks: (),
+    pub ev: (),
 }
 
 impl SimulationContext {
@@ -24,6 +27,17 @@ impl SimulationContext {
             rigid_bodies: RigidBodySet::new(),
             coliders: ColliderSet::new(),
             gravity: Vector3::new(0.0, 0.0, -9.81),
+            intergration_parameters: IntegrationParameters::default(),
+            physics_pipeline: PhysicsPipeline::new(),
+            island_manager: IslandManager::new(),
+            broad_phase: BroadPhase::new(),
+            narrow_phase: NarrowPhase::new(),
+            impulse_joint_set: ImpulseJointSet::new(),
+            multibody_joint_set: MultibodyJointSet::new(),
+            ccd_solver: CCDSolver::new(),
+            query_pipeline: QueryPipeline::new(),
+            physics_hooks: (),
+            ev: (),
         }
     }
 }

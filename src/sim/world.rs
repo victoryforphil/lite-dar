@@ -14,7 +14,7 @@ impl World {
         let floor_colider = ColliderBuilder::cuboid(100.0, 100.0, 0.1);
 
         let cube_colider = ColliderBuilder::cuboid(1.0, 1.0, 1.0)
-            .translation(vector![10.0, 0.0, 0.0])
+            .translation(vector![5.0, 0.0, 3.0])
             .build();
         context.coliders.insert(floor_colider);
         context.coliders.insert(cube_colider);
