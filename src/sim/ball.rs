@@ -12,7 +12,7 @@ impl SimBall {
     pub fn create(&mut self, context: &mut SimulationContext) {
         //Create floor
         let rigid_body = RigidBodyBuilder::dynamic()
-            .translation(vector![5.0, 10.0, 0.0])
+            .translation(vector![0.0, 10.0, 5.0])
             .build();
         let collider = ColliderBuilder::ball(0.5).restitution(0.7).build();
         let ball_body_handle = context.rigid_bodies.insert(rigid_body);

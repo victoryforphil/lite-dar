@@ -7,6 +7,7 @@ pub mod context;
 pub mod runner;
 pub mod sensor;
 pub mod world;
+
 pub struct Simulation {
     pub context: SimulationContext,
     pub state: SimulationState,
@@ -15,7 +16,7 @@ pub struct Simulation {
     pub ball: SimBall,
     pub initd: bool,
 }
-
+#[derive(Clone)]
 pub struct SimulationState {
     pub tof_results: Vec<TOFSensorResult>,
 }
@@ -44,7 +45,7 @@ impl Simulation {
         self.initd = true;
     }
 
-    pub fn tick(&mut self) -> &SimulationState {
+    pub fn tick(&mut self) {
         info!("tick");
         println!("tick again");
         self.context.physics_pipeline.step(
@@ -67,6 +68,5 @@ impl Simulation {
             let result = sensor.tick(&mut self.context);
             self.state.tof_results.push(result);
         }
-        return &self.state;
     }
 }

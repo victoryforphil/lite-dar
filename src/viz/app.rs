@@ -1,16 +1,16 @@
 use egui::{load::SizedTexture, Color32, Pos2, Stroke, TextureId, Vec2};
 use log::info;
 
-use crate::sim::Simulation;
+use crate::sim::{runner::SimRunner, Simulation};
 
 pub struct LiteDarApp {
-    sim: Simulation,
+    sim_runner: SimRunner,
 }
 
 impl Default for LiteDarApp {
     fn default() -> Self {
         Self {
-            sim: Simulation::new(),
+            sim_runner: SimRunner::new(),
         }
     }
 }
@@ -24,30 +24,9 @@ impl LiteDarApp {
 
 impl eframe::App for LiteDarApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.sim.initd == false {
-            self.sim.init();
-            info!("Simulation initialized");
-        }
-        let res = self.sim.tick();
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
+        let result = self.sim_runner.channel_rx.try_recv();
 
-            egui::menu::bar(ui, |ui| {
-                #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
-                {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            _frame.close();
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
-
-                egui::widgets::global_dark_light_mode_buttons(ui);
-            });
-        });
-
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ctx, |ui: &mut egui::Ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("eframe template");
 
@@ -55,26 +34,43 @@ impl eframe::App for LiteDarApp {
                 ui.label("Write something: ");
             });
 
+            if ui.button("Start Sim").clicked() {
+                self.sim_runner.start();
+            }
+
             ui.separator();
 
-            let lidar_res = res.tof_results[0].result.clone();
-            //draw idar res using ui.painter().rect
-            for (x, row) in lidar_res.iter().enumerate() {
-                for (y, col) in row.iter().enumerate() {
-                    // Red if col == 1.0
-                    // black if col == 0.0
-                    let color = if *col == 1.0 {
-                        Color32::RED
-                    } else {
-                        Color32::BLACK
-                    };
-                    let size = 10.0;
-                    let rect = egui::Rect::from_min_size(
-                        Pos2::new(x as f32 * size, y as f32 * size + 100.0),
-                        Vec2::new(size, size),
-                    );
-                    ui.painter()
-                        .rect(rect, 0.0, color, Stroke::new(0.0, Color32::RED));
+            match result {
+                Ok(state) => {
+                    let lidar_res = state.tof_results[0].result.clone();
+                    //draw idar res using ui.painter().rect
+                    for (x, row) in lidar_res.iter().enumerate() {
+                        for (y, col) in row.iter().enumerate() {
+                            // Red if col == 1.0
+                            // black if col == 0.0
+                            let color = if *col != 0.0 {
+                                Color32::RED
+                            } else {
+                                Color32::BLACK
+                            };
+                            let size = 5.0;
+                            let rect = egui::Rect::from_min_size(
+                                Pos2::new(x as f32 * size, y as f32 * size + 100.0),
+                                Vec2::new(size, size),
+                            );
+                            ui.painter().rect(
+                                rect,
+                                0.0,
+                                color,
+                                Stroke::new(0.0, Color32::TRANSPARENT),
+                            );
+
+                            ui.ctx().request_repaint();
+                        }
+                    }
+                }
+                Err(_) => {
+                    ui.label("No results");
                 }
             }
         });

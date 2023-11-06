@@ -5,11 +5,11 @@ use rapier3d::prelude::{QueryFilter, Ray};
 use crate::types::pose::Pose;
 
 use super::context::SimulationContext;
-
+#[derive(Clone)]
 pub struct TOFSensor {
     pub pose: Pose,
 }
-
+#[derive(Clone)]
 pub struct TOFSensorResult {
     pub result: Vec<Vec<f32>>,
 }
@@ -20,26 +20,24 @@ impl TOFSensor {
 
     pub fn init(&mut self, context: &mut SimulationContext) {
         self.pose.position.x = -10.0;
-        self.pose.position.y = 0.0;
+        self.pose.position.y = 1.0;
 
-        self.pose.position.z = 0.5;
+        self.pose.position.z = 0.0;
     }
 
     pub fn tick(&mut self, context: &mut SimulationContext) -> TOFSensorResult {
-        let ray = Ray::new(point![0.0, 0.0, 0.5], vector![100.0, 0.0, 0.0]);
-
         let max_toi = 100.0;
         let solid = true;
-        let filter = QueryFilter::default();
+        let filter = QueryFilter::new();
 
         // Store 2d array of lidar distances
         let lidar_w = 32;
         let lidar_h = 32;
         let mut lidar_distances = vec![vec![0.0; lidar_w as usize]; lidar_h as usize];
 
-        for x in 0..lidar_w {
-            for y in 0..lidar_h {
-                let ray = self.calculate_ray(x, y, lidar_w, lidar_h, 90.0);
+        for y in 0..lidar_w {
+            for x in 0..lidar_h {
+                let ray = self.calculate_ray(x, y, lidar_w, lidar_h, 120.0);
                 let hit_result = context.query_pipeline.cast_ray(
                     &context.rigid_bodies,
                     &context.coliders,
@@ -78,10 +76,8 @@ impl TOFSensor {
         let y = (y / h) * fov - fov / 2.0;
 
         let dir = vector![x, y, 0.0];
-        // Scale dir by 100
-        let dir = dir.normalize() * 50.0;
 
-        let ray = Ray::new(point![0.0, 0.0, 1.0], dir);
+        let ray = Ray::new(point![0.0, 1.0, 0.0], dir);
 
         ray
     }
